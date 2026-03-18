@@ -457,6 +457,10 @@ function save_original_uploaded_file(array $file, string $mime, string $destinat
     return normalize_relative_upload_path($destinationRelativeDir . '/' . $name);
 }
 
+// ===================================================================================
+// HÀM TỐI ƯU CỐT LÕI (XỬ LÝ Ở BACKEND):
+// Tiết kiệm CPU bằng cách bỏ qua nén thừa thãi và kết hợp Imagick.
+// ===================================================================================
 function optimize_and_store_uploaded_image(
     array $file,
     string $mime,
@@ -482,8 +486,11 @@ function optimize_and_store_uploaded_image(
         return save_original_uploaded_file($file, $mime, $destinationRelativeDir);
     }
 
-    $source = @create_image_resource_from_upload($file['tmp_name'], $mime);
-    if (!$source) {
+    // [TỐI ƯU BƯỚC 1]: SHORT-CIRCUIT
+    // File được JS đẩy lên (đã nén dưới 1280px và convert sang webp/jpeg).
+    // => Bỏ qua khâu dùng GD render lại toàn bộ hình ảnh gây nghẽn CPU. 
+    // Trả về file luôn, tốc độ phản hồi tính bằng ms!
+    if ($srcWidth <= $maxWidth && in_array($mime, ['image/jpeg', 'image/webp'])) {
         return save_original_uploaded_file($file, $mime, $destinationRelativeDir);
     }
 
@@ -493,6 +500,64 @@ function optimize_and_store_uploaded_image(
     if ($srcWidth > $maxWidth) {
         $targetWidth = $maxWidth;
         $targetHeight = max(1, (int)round(($srcHeight / $srcWidth) * $targetWidth));
+    }
+
+    // [TỐI ƯU BƯỚC 2]: ƯU TIÊN SỬ DỤNG IMAGICK (NẾU SERVER HỖ TRỢ)
+    // Cực kỳ nhanh, ăn ít RAM hơn GD và giữ chất lượng vượt trội.
+    if (extension_loaded('imagick')) {
+        try {
+            $imagick = new Imagick($file['tmp_name']);
+            $imagick->stripImage(); // Xóa Metadata (EXIF) ngay lập tức
+
+            if ($srcWidth > $maxWidth) {
+                $imagick->scaleImage($maxWidth, 0); // scaleImage nhanh hơn resizeImage
+            }
+
+            $useWebp = function_exists('imagewebp') || in_array('WEBP', Imagick::queryFormats());
+            $outputExt = $useWebp ? 'webp' : 'jpg';
+
+            if ($outputExt === 'webp') {
+                $imagick->setImageFormat('webp');
+                $imagick->setImageCompressionQuality($webpQuality);
+            } else {
+                $imagick->setImageFormat('jpeg');
+                $imagick->setImageCompressionQuality($jpegQuality);
+                
+                // Nếu là PNG trong suốt mà convert sang JPG, cần đổ nền trắng
+                if ($imagick->getImageAlphaChannel()) {
+                    $imagick->setImageBackgroundColor('white');
+                    $imagick->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+                    $imagick->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+                }
+            }
+
+            $name = build_upload_filename($outputExt);
+            $absolutePath = $targetDir . '/' . $name;
+            
+            $imagick->writeImage($absolutePath);
+            $imagick->clear();
+            $imagick->destroy();
+
+            $optimizedBytes = @filesize($absolutePath) ?: 0;
+            $originalBytes = (int)($file['size'] ?? 0);
+
+            // Cập nhật đường dẫn an toàn
+            if ($optimizedBytes > 0 && ($originalBytes <= 0 || $optimizedBytes < $originalBytes)) {
+                 return normalize_relative_upload_path($destinationRelativeDir . '/' . $name);
+            }
+            @unlink($absolutePath);
+            // Fallback lưu file gốc nếu việc nén không hiệu quả hơn
+            return save_original_uploaded_file($file, $mime, $destinationRelativeDir);
+            
+        } catch (Throwable $e) {
+            // Lỗi Imagick => Bỏ qua và rơi xuống Fallback dùng GD
+        }
+    }
+
+    // [TỐI ƯU BƯỚC 3]: XỬ LÝ FALLBACK BẰNG GD TRUYỀN THỐNG
+    $source = @create_image_resource_from_upload($file['tmp_name'], $mime);
+    if (!$source) {
+        return save_original_uploaded_file($file, $mime, $destinationRelativeDir);
     }
 
     $destination = imagecreatetruecolor($targetWidth, $targetHeight);
@@ -515,18 +580,12 @@ function optimize_and_store_uploaded_image(
         imagefilledrectangle($destination, 0, 0, $targetWidth, $targetHeight, $white);
     }
 
-    imagecopyresampled(
-        $destination,
-        $source,
-        0,
-        0,
-        0,
-        0,
-        $targetWidth,
-        $targetHeight,
-        $srcWidth,
-        $srcHeight
-    );
+    // Tránh sử dụng hàm imagecopyresampled siêu nặng nếu kích thước không bị thu nhỏ
+    if ($targetWidth === $srcWidth && $targetHeight === $srcHeight) {
+        imagecopy($destination, $source, 0, 0, 0, 0, $targetWidth, $targetHeight);
+    } else {
+        imagecopyresampled($destination, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $srcWidth, $srcHeight);
+    }
 
     $name = build_upload_filename($outputExt);
     $absolutePath = $targetDir . '/' . $name;
@@ -584,7 +643,7 @@ function handle_image_upload(?array $file, array $options = []): ?string
 
     if (
         !$shouldOptimize ||
-        !can_process_image_with_gd($mime) ||
+        (!can_process_image_with_gd($mime) && !extension_loaded('imagick')) ||
         (int)($file['size'] ?? 0) <= (int)($options['optimize_after_bytes'] ?? 300 * 1024)
     ) {
         return save_original_uploaded_file($file, $mime, $destinationRelativeDir);

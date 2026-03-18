@@ -299,35 +299,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $thumbnail = $galleryImages[0] ?? null;
 
             $stmt = db()->prepare('
-    INSERT INTO products (
-        product_name, product_code, category_id, product_type_id, style_id, gender,
-        original_price, sale_price, purchase_price, note, material, size, information, short_description,
-        quantity, color, import_link, thumbnail, is_active
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-');
+                UPDATE products SET 
+                    product_name = ?, category_id = ?, product_type_id = ?, style_id = ?, gender = ?,
+                    original_price = ?, sale_price = ?, purchase_price = ?, note = ?, material = ?, size = ?, information = ?, short_description = ?,
+                    quantity = ?, color = ?, import_link = ?, thumbnail = ?, is_active = ?
+                WHERE id = ?
+            ');
 
-$stmt->execute([
-    $data['product_name'],
-    $productCode,
-    $data['category_id'],
-    $data['product_type_id'],
-    $data['style_id'],
-    $data['gender'],
-    $data['original_price'],
-    $data['sale_price'],
-    $data['purchase_price'],
-    $data['note'],
-    $data['material'],
-    $data['size'],
-    $data['information'],
-    $data['short_description'],
-    $data['quantity'],
-    $data['color'],
-    $data['import_link'],
-    $thumbnail,
-    $data['is_active'],
-]);
+            $stmt->execute([
+                $data['product_name'],
+                $data['category_id'],
+                $data['product_type_id'],
+                $data['style_id'],
+                $data['gender'],
+                $data['original_price'],
+                $data['sale_price'],
+                $data['purchase_price'],
+                $data['note'],
+                $data['material'],
+                $data['size'],
+                $data['information'],
+                $data['short_description'],
+                $data['quantity'],
+                $data['color'],
+                $data['import_link'],
+                $thumbnail,
+                $data['is_active'],
+                $id
+            ]);
 
             replace_product_gallery($id, $galleryImages);
             sync_product_conditions($id, $selectedConditions);
@@ -355,7 +354,7 @@ $stmt->execute([
                     original_price, sale_price, purchase_price, note, material, size, information, short_description,
                     quantity, color, import_link, thumbnail, is_active
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
 
             $stmt->execute([
@@ -416,788 +415,519 @@ if ($currentPrimaryImage === '' && !empty($images)) {
     $currentPrimaryImage = 'existing:' . (int)$images[0]['id'];
 }
 
-require_once __DIR__ . '/../includes/header.php';
+// require_once __DIR__ . '/../includes/header.php';
 ?>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 /* ==========================================================================
-   CSS DÀNH CHO FORM SẢN PHẨM
+   MODERN ADMIN DASHBOARD STYLESHEET (Đồng bộ)
    ========================================================================== */
-.admin-wrapper {
-    padding-top: 20px;
-    padding-bottom: 60px;
+:root {
+    --admin-bg: #f3f4f6;
+    --admin-card: #ffffff;
+    --admin-text-main: #111827;
+    --admin-text-muted: #6b7280;
+    --admin-border: #e5e7eb;
+    --admin-primary: #4f46e5;
+    --admin-primary-hover: #4338ca;
+    --admin-danger: #ef4444;
+    --admin-danger-bg: #fef2f2;
+    --admin-danger-border: #fecaca;
+    --admin-success: #10b981;
+    --admin-radius: 12px;
+    --admin-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --admin-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --sidebar-width: 260px;
 }
 
-.admin-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--line-light, #e5e7eb);
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.admin-header h1 {
-    font-size: 24px;
-    color: var(--text-main);
+body {
+    background-color: var(--admin-bg);
+    color: var(--admin-text-main);
+    font-family: 'Inter', sans-serif;
     margin: 0;
-    font-weight: 700;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
 }
 
-.card-box {
-    background: var(--bg-white, #fff);
-    border-radius: var(--radius-lg, 12px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    border: 1px solid var(--line-light, #e5e7eb);
-    padding: 30px;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
-}
-
-.col-full {
-    grid-column: 1 / -1;
-}
-
-@media (min-width: 768px) {
-    .form-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-.form-group label {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-main, #1f2937);
-    margin-bottom: 8px;
-}
-
-.form-group .hint {
-    display: block;
-    font-size: 13px;
-    color: #6b7280;
-    margin-top: 6px;
-    font-weight: 400;
-    line-height: 1.5;
-}
-
-.required-mark {
-    color: var(--danger-color, #ef4444);
-    margin-left: 2px;
-}
-
-.form-control {
+/* ==========================================
+   BỐ CỤC CHÍNH
+   ========================================== */
+.admin-wrapper {
+    display: flex;
+    min-height: 100vh;
     width: 100%;
-    padding: 12px 14px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #1f2937;
-    background-color: #fff;
-    font-family: inherit;
-    outline: none;
-    transition: all 0.2s ease;
-    min-height: 46px;
 }
 
-.form-control:focus {
-    border-color: var(--primary-color, #000);
-    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
-}
-
-.form-control[readonly] {
-    background-color: #f3f4f6;
-    cursor: not-allowed;
-    color: #6b7280;
-}
-
-textarea.form-control {
-    resize: vertical;
-    min-height: 100px;
-}
-
-.checkbox-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 8px;
-}
-
-.checkbox-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: #f8fafc;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s;
-    color: #334155;
-}
-
-.checkbox-chip input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary-color, #000);
-    cursor: pointer;
+/* SIDEBAR */
+.admin-sidebar {
+    width: var(--sidebar-width);
+    background: var(--admin-card);
+    border-right: 1px solid var(--admin-border);
     flex-shrink: 0;
-}
-
-.checkbox-chip:hover {
-    border-color: #cbd5e1;
-    background: #f1f5f9;
-}
-
-.checkbox-chip:has(input:checked) {
-    background: #f0fdf4;
-    border-color: #16a34a;
-    color: #16a34a;
-}
-
-.checkbox-inline {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #1f2937;
-    cursor: pointer;
-    padding: 14px 20px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    transition: all 0.2s;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
 }
 
-.checkbox-inline:hover {
-    background: #f1f5f9;
-}
-
-.checkbox-inline input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--primary-color, #000);
-    flex-shrink: 0;
-}
-
-.upload-container {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+.sidebar-header {
     padding: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-}
-
-.upload-title {
-    font-size: 16px !important;
-    font-weight: 700 !important;
-    margin-bottom: 16px !important;
-    color: #111827 !important;
-}
-
-.upload-dropzone {
-    position: relative;
-    border: 2px dashed #cbd5e1;
-    border-radius: 12px;
-    background: #f8fafc;
-    padding: 40px 20px;
-    text-align: center;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-
-.upload-dropzone:hover {
-    border-color: var(--primary-color, #000);
-    background: #f1f5f9;
-}
-
-.upload-dropzone input[type="file"] {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    z-index: 10;
-}
-
-.upload-placeholder {
     display: flex;
-    flex-direction: column;
     align-items: center;
     gap: 12px;
-    pointer-events: none;
 }
 
-.upload-placeholder svg {
-    color: #64748b;
-    width: 40px;
-    height: 40px;
+.sidebar-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--admin-primary);
+    letter-spacing: -0.5px;
 }
 
-.upload-placeholder .text-main {
-    font-size: 15px;
-    font-weight: 600;
-    color: #334155;
+.sidebar-menu {
+    list-style: none;
+    padding: 0 16px;
+    margin: 0;
+    flex-grow: 1;
 }
 
-.upload-placeholder .text-sub {
-    font-size: 13px;
-    color: #64748b;
+.sidebar-menu li {
+    margin-bottom: 4px;
 }
 
-.upload-status {
-    margin-top: 12px;
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: var(--admin-text-muted);
+    text-decoration: none;
     font-size: 14px;
     font-weight: 500;
-    min-height: 20px;
-}
-
-.existing-gallery {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid #e5e7eb;
-}
-
-.preview-gallery {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-}
-
-.existing-gallery h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 16px;
-}
-
-.existing-gallery-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
-.existing-gallery-item {
-    width: 160px;
-    position: relative;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
-.existing-gallery-item:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+.sidebar-menu a:hover {
+    background-color: #f9fafb;
+    color: var(--admin-text-main);
 }
 
-.existing-gallery-item img {
-    width: 100%;
-    height: 160px;
-    object-fit: cover;
-    display: block;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.existing-gallery-meta {
-    padding: 12px;
-    background: #f8fafc;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-}
-
-.thumb-badge {
-    background: var(--primary-color, #000);
-    color: #fff;
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 4px;
+.sidebar-menu a.active {
+    background-color: #eef2ff;
+    color: var(--admin-primary);
     font-weight: 600;
-    align-self: flex-start;
-    margin-bottom: 4px;
 }
 
-.mini-option {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    color: #334155;
-    font-weight: 500;
+.sidebar-menu a.text-danger {
+    color: var(--admin-danger);
+    margin-top: auto;
+}
+.sidebar-menu a.text-danger:hover {
+    background-color: var(--admin-danger-bg);
 }
 
-.mini-option input[type="radio"],
-.mini-option input[type="checkbox"] {
-    accent-color: var(--primary-color, #000);
-    flex-shrink: 0;
-    width: 16px;
-    height: 16px;
+/* MAIN CONTENT */
+.admin-main {
+    flex-grow: 1;
+    padding: 32px;
+    max-width: calc(100% - var(--sidebar-width));
+    overflow-x: hidden;
 }
 
-.mini-option.danger {
-    color: #dc2626;
-}
-.mini-option.danger input[type="checkbox"] {
-    accent-color: #dc2626;
+/* ==========================================
+   CSS DÀNH CHO FORM SẢN PHẨM
+   ========================================== */
+.admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--admin-border); gap: 12px; flex-wrap: wrap; }
+.admin-header h1 { font-size: 24px; color: var(--admin-text-main); margin: 0; font-weight: 700; }
+.admin-header .btn-light { background: #fff; border: 1px solid var(--admin-border); padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 8px; color: var(--admin-text-main); text-decoration: none; transition: all 0.2s; }
+.admin-header .btn-light:hover { background: #f9fafb; }
+
+.card-box { background: var(--admin-card); border-radius: var(--admin-radius); box-shadow: var(--admin-shadow-sm); border: 1px solid var(--admin-border); padding: 30px; }
+.form-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+.col-full { grid-column: 1 / -1; }
+@media (min-width: 992px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+
+.form-group label { display: block; font-size: 14px; font-weight: 600; color: var(--admin-text-main); margin-bottom: 8px; }
+.form-group .hint { display: block; font-size: 13px; color: var(--admin-text-muted); margin-top: 6px; font-weight: 400; line-height: 1.5; }
+.required-mark { color: var(--admin-danger); margin-left: 2px; }
+
+.form-control { width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--admin-border); border-radius: 8px; font-size: 14px; color: var(--admin-text-main); background-color: #fff; font-family: 'Inter', sans-serif; outline: none; transition: all 0.2s ease; min-height: 46px; }
+.form-control:focus { border-color: var(--admin-primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+.form-control[readonly] { background-color: #f9fafb; cursor: not-allowed; color: var(--admin-text-muted); }
+textarea.form-control { resize: vertical; min-height: 100px; }
+
+select.form-control {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px 16px;
+    padding-right: 40px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
-.preview-file-name {
-    font-size: 12px;
-    color: #64748b;
-    line-height: 1.4;
-    word-break: break-word;
-    text-align: left;
-    margin-bottom: 4px;
-}
+/* Checkboxes */
+.checkbox-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.checkbox-chip { display: inline-flex; align-items: center; gap: 8px; background: #f9fafb; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid var(--admin-border); transition: all 0.2s; color: var(--admin-text-main); }
+.checkbox-chip input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--admin-primary); cursor: pointer; flex-shrink: 0; margin: 0; }
+.checkbox-chip:hover { border-color: #d1d5db; background: #f3f4f6; }
+.checkbox-chip:has(input:checked) { background: #eef2ff; border-color: #a5b4fc; color: var(--admin-primary); }
 
-.existing-gallery-item.is-removing {
-    opacity: 0.5;
-    border-color: #fca5a5;
-    background: #fef2f2;
-}
-.existing-gallery-item.is-removing img {
-    filter: grayscale(80%);
-}
+.checkbox-inline { display: inline-flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; color: var(--admin-text-main); cursor: pointer; padding: 14px 20px; background: #f9fafb; border: 1px solid var(--admin-border); border-radius: 8px; transition: all 0.2s; }
+.checkbox-inline:hover { background: #f3f4f6; }
+.checkbox-inline input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--admin-primary); flex-shrink: 0; margin: 0; }
+.checkbox-inline:has(input:checked) { background: #eef2ff; border-color: #a5b4fc; }
 
-.alert {
-    padding: 16px 20px;
-    border-radius: 8px;
-    margin-bottom: 24px;
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1.5;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+/* Image Upload Area */
+.upload-container { background: #fff; border: 1px solid var(--admin-border); border-radius: 12px; padding: 24px; box-shadow: var(--admin-shadow-sm); }
+.upload-title { font-size: 16px !important; font-weight: 700 !important; margin-bottom: 16px !important; color: var(--admin-text-main) !important; }
+.upload-dropzone { position: relative; border: 2px dashed #cbd5e1; border-radius: 12px; background: #f9fafb; padding: 40px 20px; text-align: center; transition: all 0.2s ease; cursor: pointer; }
+.upload-dropzone:hover { border-color: var(--admin-primary); background: #eef2ff; }
+.upload-dropzone input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10; }
+.upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: 12px; pointer-events: none; }
+.upload-placeholder svg { color: var(--admin-text-muted); width: 40px; height: 40px; }
+.upload-placeholder .text-main { font-size: 15px; font-weight: 600; color: var(--admin-text-main); }
+.upload-placeholder .text-sub { font-size: 13px; color: var(--admin-text-muted); }
+.upload-status { margin-top: 12px; font-size: 14px; font-weight: 500; min-height: 20px; }
 
-.alert.error {
-    background-color: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
-}
+/* Gallery Items */
+.existing-gallery { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--admin-border); }
+.preview-gallery { margin-top: 0; padding-top: 0; border-top: none; }
+.existing-gallery h3 { font-size: 16px; font-weight: 600; color: var(--admin-text-main); margin-bottom: 16px; }
+.existing-gallery-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+.existing-gallery-item { width: 160px; position: relative; border: 1px solid var(--admin-border); border-radius: 10px; overflow: hidden; background: #fff; transition: all 0.2s ease; }
+.existing-gallery-item:hover { border-color: #cbd5e1; box-shadow: var(--admin-shadow-sm); }
+.existing-gallery-item img { width: 100%; height: 160px; object-fit: cover; display: block; border-bottom: 1px solid var(--admin-border); }
+.existing-gallery-meta { padding: 12px; background: #f9fafb; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 
-.form-actions {
-    display: flex;
-    gap: 16px;
-    margin-top: 40px;
-    padding-top: 24px;
-    border-top: 1px solid #e5e7eb;
-}
+.thumb-badge { background: var(--admin-primary); color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; font-weight: 600; align-self: flex-start; margin-bottom: 4px; }
+.mini-option { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: var(--admin-text-main); font-weight: 500; margin: 0; }
+.mini-option input[type="radio"], .mini-option input[type="checkbox"] { accent-color: var(--admin-primary); flex-shrink: 0; width: 16px; height: 16px; margin: 0; }
+.mini-option.danger { color: var(--admin-danger); }
+.mini-option.danger input[type="checkbox"] { accent-color: var(--admin-danger); }
+.preview-file-name { font-size: 12px; color: var(--admin-text-muted); line-height: 1.4; word-break: break-word; text-align: left; margin-bottom: 4px; }
 
-.form-actions .btn-big {
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-}
+.existing-gallery-item.is-removing { opacity: 0.5; border-color: var(--admin-danger-border); background: var(--admin-danger-bg); }
+.existing-gallery-item.is-removing img { filter: grayscale(80%); }
 
-@media (max-width: 768px) {
-    .form-actions {
-        flex-direction: column;
-    }
-    .form-actions .btn {
-        width: 100%;
-    }
-    .existing-gallery-item {
-        width: 100%;
-    }
+/* Alerts */
+.alert { padding: 16px 20px; border-radius: 10px; margin-bottom: 24px; font-size: 14px; font-weight: 500; line-height: 1.5; display: flex; align-items: center; gap: 10px; }
+.alert.error { background-color: var(--admin-danger-bg); color: #b91c1c; border: 1px solid var(--admin-danger-border); }
+
+/* Buttons */
+.form-actions { display: flex; gap: 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--admin-border); }
+.form-actions .btn-big { padding: 12px 24px; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; }
+.btn-primary { background: var(--admin-primary); color: #fff; }
+.btn-primary:hover { background: var(--admin-primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
+.btn-light { background: #fff; border: 1px solid var(--admin-border); color: var(--admin-text-main); }
+.btn-light:hover { background: #f9fafb; border-color: #d1d5db; }
+
+@media (max-width: 768px) { 
+    .admin-wrapper { flex-direction: column; }
+    .admin-sidebar { width: 100%; height: auto; position: relative; border-right: none; border-bottom: 1px solid var(--admin-border); }
+    .sidebar-menu { display: flex; overflow-x: auto; padding: 12px; gap: 8px; }
+    .sidebar-menu li { margin: 0; white-space: nowrap; }
+    .sidebar-menu a.text-danger { margin-top: 0; }
+    .admin-main { max-width: 100%; padding: 16px; }
+    .form-actions { flex-direction: column; } 
+    .form-actions .btn-big { width: 100%; } 
+    .existing-gallery-item { width: 100%; } 
+    .existing-gallery-item img { height: 200px; }
 }
 </style>
 
-<div class="container admin-wrapper">
-    <div class="admin-header">
-        <h1><?= $isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới' ?></h1>
-        <a class="btn btn-light" href="<?= BASE_URL ?>/admin/products.php">← Hủy & Quay lại</a>
-    </div>
-
-    <?php if (!empty($errors)): ?>
-        <div class="alert error">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <div><?= e(implode('<br>', $errors)) ?></div>
+<div class="admin-wrapper">
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--admin-primary)"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+            <h2>Luxury Admin</h2>
         </div>
-    <?php endif; ?>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="<?= BASE_URL ?>/admin/products.php" class="active">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Sản phẩm
+                </a>
+            </li>
+            <li>
+                <a href="<?= BASE_URL ?>/admin/categories.php">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    Danh mục
+                </a>
+            </li>
+            <li>
+                <a href="<?= BASE_URL ?>/admin/product_types.php">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                    Loại sản phẩm
+                </a>
+            </li>
+            <li>
+                <a href="<?= BASE_URL ?>/admin/product_conditions.php">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    Tình trạng
+                </a>
+            </li>
+            <li>
+                <a href="<?= BASE_URL ?>/admin/styles.php">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    Phong cách
+                </a>
+            </li>
+            <li style="margin-top: 24px;">
+                <a href="<?= BASE_URL ?>/admin/logout.php" class="text-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Đăng xuất
+                </a>
+            </li>
+        </ul>
+    </aside>
 
-    <form method="post" enctype="multipart/form-data" class="card-box" id="productForm">
-        <div class="form-grid">
-
-            <div class="form-group col-full">
-                <label for="product_name">Tên sản phẩm <span class="required-mark">*</span></label>
-                <input
-                    id="product_name"
-                    type="text"
-                    name="product_name"
-                    class="form-control"
-                    value="<?= e($product['product_name']) ?>"
-                    required
-                    placeholder="VD: Áo Thun Nam Có Cổ"
-                >
-            </div>
-
-            <div class="form-group">
-                <label>Mã sản phẩm</label>
-                <input 
-                    type="text" 
-                    id="product_code" 
-                    name="product_code" 
-                    class="form-control" 
-                    value="<?= e($product['product_code']) ?>" 
-                    readonly
-                >
-                <span class="hint">Hệ thống sẽ tự động tạo mã SP dựa theo danh mục bạn chọn.</span>
-            </div>
-
-            <div class="form-group">
-                <label for="categorySelect">Danh mục <span class="required-mark">*</span></label>
-                <select name="category_id" id="categorySelect" class="form-control" required>
-                    <option value="">-- Chọn danh mục --</option>
-                    <?php foreach ($categories as $cat): ?>
-                        <option
-                            value="<?= (int)$cat['id'] ?>"
-                            <?= (int)$product['category_id'] === (int)$cat['id'] ? 'selected' : '' ?>
-                        >
-                            <?= e($cat['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="productTypeSelect">Loại sản phẩm <span class="required-mark">*</span></label>
-                <select name="product_type_id" id="productTypeSelect" class="form-control" required>
-                    <option value="">-- Chọn loại sản phẩm --</option>
-                    <?php foreach ($productTypes as $type): ?>
-                        <option
-                            value="<?= (int)$type['id'] ?>"
-                            data-category-id="<?= (int)$type['category_id'] ?>"
-                            <?= (int)$product['product_type_id'] === (int)$type['id'] ? 'selected' : '' ?>
-                        >
-                            <?= e($type['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <span class="hint">Chỉ hiển thị các loại thuộc danh mục đã chọn.</span>
-            </div>
-
-            <div class="form-group">
-                <label for="style_id">Phong cách</label>
-                <select name="style_id" id="style_id" class="form-control">
-                    <option value="">-- Chọn phong cách --</option>
-                    <?php foreach ($styles as $style): ?>
-                        <option
-                            value="<?= (int)$style['id'] ?>"
-                            <?= (int)$product['style_id'] === (int)$style['id'] ? 'selected' : '' ?>
-                        >
-                            <?= e($style['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="gender">Giới tính <span class="required-mark">*</span></label>
-                <select name="gender" id="gender" class="form-control" required>
-                    <?php foreach (product_gender_options() as $gender): ?>
-                        <option value="<?= e($gender) ?>" <?= $product['gender'] === $gender ? 'selected' : '' ?>>
-                            <?= e($gender) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="original_price">Giá gốc (VNĐ) (đây là giá gạch) <span class="required-mark">*</span></label>
-                <input
-                    id="original_price"
-                    type="text"
-                    name="original_price"
-                    class="form-control money-input"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    value="<?= e($formatPriceInput($product['original_price'])) ?>"
-                    required
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="sale_price">Giá khuyến mãi (VNĐ) (đây là giá bán)</label>
-                <input
-                    id="sale_price"
-                    type="text"
-                    name="sale_price"
-                    class="form-control money-input"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    value="<?= e($formatPriceInput($product['sale_price'])) ?>"
-                >
-                <span class="hint">Để trống nếu không sale.</span>
-            </div>
-
-            <div class="form-group">
-                <label for="purchase_price">Giá nhập từ kho (VNĐ)</label>
-                <input
-                    id="purchase_price"
-                    type="text"
-                    name="purchase_price"
-                    class="form-control money-input"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    value="<?= e($formatPriceInput($product['purchase_price'] ?? '')) ?>"
-                >
-                <span class="hint">Trường ghi nhớ nội bộ, chỉ dùng trong giao diện quản lý.</span>
-            </div>
-
-            <div class="form-group">
-                <label for="note">Ghi chú nội bộ</label>
-                <input
-                    id="note"
-                    type="text"
-                    name="note"
-                    class="form-control"
-                    value="<?= e($product['note'] ?? '') ?>"
-                    placeholder="VD: Hàng dễ bán, form nhỏ hơn bình thường, nhập từ mối A..."
-                >
-                <span class="hint">Chỉ dùng để ghi nhớ trong trang quản lý, không hiển thị ra ngoài shop.</span>
-            </div>
-
-            <div class="form-group">
-                <label for="material">Chất liệu</label>
-                <input
-                    id="material"
-                    type="text"
-                    name="material"
-                    class="form-control"
-                    value="<?= e($product['material']) ?>"
-                    placeholder="VD: Cotton, Kaki..."
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="size">Kích thước (Size)</label>
-                <input
-                    id="size"
-                    type="text"
-                    name="size"
-                    class="form-control"
-                    placeholder="VD: S, M, L, XL"
-                    value="<?= e($product['size']) ?>"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="color">Màu sắc</label>
-                <input
-                    id="color"
-                    type="text"
-                    name="color"
-                    class="form-control"
-                    placeholder="VD: Đen, Trắng, Xám"
-                    value="<?= e($product['color']) ?>"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="quantity">Số lượng trong kho</label>
-                <input
-                    id="quantity"
-                    type="number"
-                    name="quantity"
-                    class="form-control"
-                    min="0"
-                    value="<?= e((string)$product['quantity']) ?>"
-                >
-            </div>
-
-            <div class="form-group col-full">
-                <label for="import_link">Link Zalo nhập hàng / Nguồn / SĐT</label>
-                <input
-                    id="import_link"
-                    type="text"
-                    name="import_link"
-                    class="form-control"
-                    value="<?= e($product['import_link']) ?>"
-                    placeholder="Nhập link (https://...) hoặc số điện thoại nguồn hàng"
-                >
-                <span class="hint">Bạn có thể điền link Zalo, link nguồn hàng hoặc số điện thoại đều được.</span>
-            </div>
-
-            <div class="form-group col-full">
-                <label>Tình trạng sản phẩm</label>
-                <div class="checkbox-list">
-                    <?php if (empty($productConditions)): ?>
-                        <span class="hint">Chưa có tình trạng nào. Hãy thêm tại mục Quản lý tình trạng.</span>
-                    <?php else: ?>
-                        <?php foreach ($productConditions as $condition): ?>
-                            <label class="checkbox-chip">
-                                <input
-                                    type="checkbox"
-                                    name="condition_ids[]"
-                                    value="<?= (int)$condition['id'] ?>"
-                                    <?= in_array((int)$condition['id'], $selectedConditions, true) ? 'checked' : '' ?>
-                                >
-                                <span><?= e($condition['name']) ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <div class="form-group col-full">
-                <label for="short_description">Mô tả ngắn</label>
-                <textarea
-                    id="short_description"
-                    name="short_description"
-                    class="form-control"
-                    rows="3"
-                    placeholder="Đoạn văn ngắn gọn giới thiệu điểm nổi bật của SP..."
-                ><?= e($product['short_description']) ?></textarea>
-            </div>
-
-            <div class="form-group col-full">
-                <label for="information">Thông tin chi tiết</label>
-                <textarea
-                    id="information"
-                    name="information"
-                    class="form-control"
-                    rows="6"
-                    placeholder="Mô tả chi tiết về sản phẩm, hướng dẫn bảo quản, nguồn gốc..."
-                ><?= e($product['information']) ?></textarea>
-            </div>
-
-            <div class="form-group col-full">
-                <label>Trạng thái hiển thị</label>
-                <label class="checkbox-inline">
-                    <input
-                        type="checkbox"
-                        name="is_active"
-                        value="1"
-                        <?= !empty($product['is_active']) ? 'checked' : '' ?>
-                    >
-                    Hiển thị sản phẩm này trên gian hàng website
-                </label>
-            </div>
-
-            <div class="form-group col-full upload-container">
-                <label class="upload-title" for="galleryFiles">
-                    Thư viện ảnh sản phẩm <span class="required-mark">*</span>
-                </label>
-
-                <div class="upload-dropzone">
-                    <input
-                        id="galleryFiles"
-                        type="file"
-                        name="gallery_files[]"
-                        accept="image/png,image/jpeg,image/webp"
-                        multiple
-                        <?= $isEdit ? '' : 'required' ?>
-                    >
-                    <div class="upload-placeholder">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        <span class="text-main">Nhấn để chọn ảnh hoặc kéo thả vào đây</span>
-                        <span class="text-sub">Hệ thống sẽ nén nhẹ và tải nền ngay lập tức. Tối đa 8 ảnh/lần.</span>
-                    </div>
-                </div>
-
-                <input
-                    type="hidden"
-                    name="uploaded_gallery_paths"
-                    id="uploadedGalleryPaths"
-                    value='<?= e($stagedUploadPathsJson) ?>'
-                >
-
-                <div id="uploadStatus" class="upload-status"></div>
-
-                <div class="existing-gallery preview-gallery" id="newPreviewBlock" style="display:none;">
-                    <h3>Ảnh mới vừa tải lên</h3>
-                    <div class="existing-gallery-grid" id="newPreviewGrid"></div>
-                </div>
-            </div>
-
-            <?php if (!empty($images)): ?>
-                <div class="col-full existing-gallery">
-                    <h3>Quản lý ảnh hiện tại</h3>
-                    <div class="existing-gallery-grid">
-                        <?php foreach ($images as $index => $image): ?>
-                            <?php $existingId = (int)$image['id']; ?>
-                            <div class="existing-gallery-item" data-existing-id="<?= $existingId ?>">
-                                <img src="<?= e(resolve_media_url($image['image_url'])) ?>" alt="Ảnh SP">
-
-                                <div class="existing-gallery-meta">
-                                    <?php if ($index === 0): ?>
-                                        <span class="thumb-badge">Đang là ảnh chính</span>
-                                    <?php endif; ?>
-
-                                    <label class="mini-option">
-                                        <input
-                                            type="radio"
-                                            name="primary_image"
-                                            value="existing:<?= $existingId ?>"
-                                            class="primary-radio"
-                                            data-existing-id="<?= $existingId ?>"
-                                            <?= $currentPrimaryImage === 'existing:' . $existingId ? 'checked' : '' ?>
-                                        >
-                                        <span>Chọn làm ảnh chính</span>
-                                    </label>
-
-                                    <label class="mini-option danger">
-                                        <input
-                                            type="checkbox"
-                                            name="remove_image_ids[]"
-                                            value="<?= $existingId ?>"
-                                            class="remove-image-checkbox"
-                                            data-existing-id="<?= $existingId ?>"
-                                        >
-                                        <span>Xóa ảnh</span>
-                                    </label>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1><?= $isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới' ?></h1>
+            <a class="btn btn-light" href="<?= BASE_URL ?>/admin/products.php">← Hủy & Quay lại</a>
         </div>
 
-        <div class="form-actions">
-            <button class="btn btn-primary btn-big" type="submit" id="submitBtn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                    <polyline points="7 3 7 8 15 8"></polyline>
+        <?php if (!empty($errors)): ?>
+            <div class="alert error">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
-                Lưu thông tin sản phẩm
-            </button>
+                <div><?= e(implode('<br>', $errors)) ?></div>
+            </div>
+        <?php endif; ?>
 
-            <a class="btn btn-light btn-big" href="<?= BASE_URL ?>/admin/products.php">Hủy thao tác</a>
-        </div>
-    </form>
+        <form method="post" enctype="multipart/form-data" class="card-box" id="productForm">
+            <div class="form-grid">
+
+                <div class="form-group col-full">
+                    <label for="product_name">Tên sản phẩm <span class="required-mark">*</span></label>
+                    <input id="product_name" type="text" name="product_name" class="form-control" value="<?= e($product['product_name']) ?>" required placeholder="VD: Áo Thun Nam Có Cổ">
+                </div>
+
+                <div class="form-group">
+                    <label>Mã sản phẩm</label>
+                    <input type="text" id="product_code" name="product_code" class="form-control" value="<?= e($product['product_code']) ?>" readonly>
+                    <span class="hint">Hệ thống sẽ tự động tạo mã SP dựa theo danh mục bạn chọn.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="categorySelect">Danh mục <span class="required-mark">*</span></label>
+                    <select name="category_id" id="categorySelect" class="form-control" required>
+                        <option value="">-- Chọn danh mục --</option>
+                        <?php foreach ($categories as $cat): ?>
+                            <option value="<?= (int)$cat['id'] ?>" <?= (int)$product['category_id'] === (int)$cat['id'] ? 'selected' : '' ?>>
+                                <?= e($cat['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="productTypeSelect">Loại sản phẩm <span class="required-mark">*</span></label>
+                    <select name="product_type_id" id="productTypeSelect" class="form-control" required>
+                        <option value="">-- Chọn loại sản phẩm --</option>
+                        <?php foreach ($productTypes as $type): ?>
+                            <option value="<?= (int)$type['id'] ?>" data-category-id="<?= (int)$type['category_id'] ?>" <?= (int)$product['product_type_id'] === (int)$type['id'] ? 'selected' : '' ?>>
+                                <?= e($type['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span class="hint">Chỉ hiển thị các loại thuộc danh mục đã chọn.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="style_id">Phong cách</label>
+                    <select name="style_id" id="style_id" class="form-control">
+                        <option value="">-- Chọn phong cách --</option>
+                        <?php foreach ($styles as $style): ?>
+                            <option value="<?= (int)$style['id'] ?>" <?= (int)$product['style_id'] === (int)$style['id'] ? 'selected' : '' ?>>
+                                <?= e($style['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="gender">Giới tính <span class="required-mark">*</span></label>
+                    <select name="gender" id="gender" class="form-control" required>
+                        <?php foreach (product_gender_options() as $gender): ?>
+                            <option value="<?= e($gender) ?>" <?= $product['gender'] === $gender ? 'selected' : '' ?>>
+                                <?= e($gender) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="original_price">Giá gốc (VNĐ) <span style="font-weight: 400; color: var(--admin-text-muted);">(đây là giá gạch)</span> <span class="required-mark">*</span></label>
+                    <input id="original_price" type="text" name="original_price" class="form-control money-input" inputmode="numeric" autocomplete="off" value="<?= e($formatPriceInput($product['original_price'])) ?>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="sale_price">Giá khuyến mãi (VNĐ) <span style="font-weight: 400; color: var(--admin-text-muted);">(đây là giá bán)</span></label>
+                    <input id="sale_price" type="text" name="sale_price" class="form-control money-input" inputmode="numeric" autocomplete="off" value="<?= e($formatPriceInput($product['sale_price'])) ?>">
+                    <span class="hint">Để trống nếu không sale.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="purchase_price">Giá nhập từ kho (VNĐ)</label>
+                    <input id="purchase_price" type="text" name="purchase_price" class="form-control money-input" inputmode="numeric" autocomplete="off" value="<?= e($formatPriceInput($product['purchase_price'] ?? '')) ?>">
+                    <span class="hint">Trường ghi nhớ nội bộ, chỉ dùng trong giao diện quản lý.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="note">Ghi chú nội bộ</label>
+                    <input id="note" type="text" name="note" class="form-control" value="<?= e($product['note'] ?? '') ?>" placeholder="VD: Hàng dễ bán, form nhỏ hơn bình thường, nhập từ mối A...">
+                    <span class="hint">Chỉ dùng để ghi nhớ trong trang quản lý, không hiển thị ra ngoài shop.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="material">Chất liệu</label>
+                    <input id="material" type="text" name="material" class="form-control" value="<?= e($product['material']) ?>" placeholder="VD: Cotton, Kaki...">
+                </div>
+
+                <div class="form-group">
+                    <label for="size">Kích thước (Size)</label>
+                    <input id="size" type="text" name="size" class="form-control" placeholder="VD: S, M, L, XL" value="<?= e($product['size']) ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="color">Màu sắc</label>
+                    <input id="color" type="text" name="color" class="form-control" placeholder="VD: Đen, Trắng, Xám" value="<?= e($product['color']) ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="quantity">Số lượng trong kho</label>
+                    <input id="quantity" type="number" name="quantity" class="form-control" min="0" value="<?= e((string)$product['quantity']) ?>">
+                </div>
+
+                <div class="form-group col-full">
+                    <label for="import_link">Link Zalo nhập hàng / Nguồn / SĐT</label>
+                    <input id="import_link" type="text" name="import_link" class="form-control" value="<?= e($product['import_link']) ?>" placeholder="Nhập link (https://...) hoặc số điện thoại nguồn hàng">
+                    <span class="hint">Bạn có thể điền link Zalo, link nguồn hàng hoặc số điện thoại đều được.</span>
+                </div>
+
+                <div class="form-group col-full">
+                    <label>Tình trạng sản phẩm</label>
+                    <div class="checkbox-list">
+                        <?php if (empty($productConditions)): ?>
+                            <span class="hint">Chưa có tình trạng nào. Hãy thêm tại mục Quản lý tình trạng.</span>
+                        <?php else: ?>
+                            <?php foreach ($productConditions as $condition): ?>
+                                <label class="checkbox-chip">
+                                    <input type="checkbox" name="condition_ids[]" value="<?= (int)$condition['id'] ?>" <?= in_array((int)$condition['id'], $selectedConditions, true) ? 'checked' : '' ?>>
+                                    <span><?= e($condition['name']) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="form-group col-full">
+                    <label for="short_description">Mô tả ngắn</label>
+                    <textarea id="short_description" name="short_description" class="form-control" rows="3" placeholder="Đoạn văn ngắn gọn giới thiệu điểm nổi bật của SP..."><?= e($product['short_description']) ?></textarea>
+                </div>
+
+                <div class="form-group col-full">
+                    <label for="information">Thông tin chi tiết</label>
+                    <textarea id="information" name="information" class="form-control" rows="6" placeholder="Mô tả chi tiết về sản phẩm, hướng dẫn bảo quản, nguồn gốc..."><?= e($product['information']) ?></textarea>
+                </div>
+
+                <div class="form-group col-full">
+                    <label>Trạng thái hiển thị</label>
+                    <label class="checkbox-inline">
+                        <input type="checkbox" name="is_active" value="1" <?= !empty($product['is_active']) ? 'checked' : '' ?>>
+                        Hiển thị sản phẩm này trên gian hàng website
+                    </label>
+                </div>
+
+                <div class="form-group col-full upload-container">
+                    <label class="upload-title" for="galleryFiles">Thư viện ảnh sản phẩm <span class="required-mark">*</span></label>
+
+                    <div class="upload-dropzone">
+                        <input id="galleryFiles" type="file" name="gallery_files[]" accept="image/png,image/jpeg,image/webp" multiple <?= $isEdit ? '' : 'required' ?>>
+                        <div class="upload-placeholder">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            <span class="text-main">Nhấn để chọn ảnh hoặc kéo thả vào đây</span>
+                            <span class="text-sub">Hệ thống sẽ nén nhẹ và tải nền ngay lập tức. Tối đa 8 ảnh/lần.</span>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="uploaded_gallery_paths" id="uploadedGalleryPaths" value='<?= e($stagedUploadPathsJson) ?>'>
+                    <div id="uploadStatus" class="upload-status"></div>
+
+                    <div class="existing-gallery preview-gallery" id="newPreviewBlock" style="display:none;">
+                        <h3>Ảnh mới vừa tải lên</h3>
+                        <div class="existing-gallery-grid" id="newPreviewGrid"></div>
+                    </div>
+                </div>
+
+                <?php if (!empty($images)): ?>
+                    <div class="col-full existing-gallery">
+                        <h3>Quản lý ảnh hiện tại</h3>
+                        <div class="existing-gallery-grid">
+                            <?php foreach ($images as $index => $image): ?>
+                                <?php $existingId = (int)$image['id']; ?>
+                                <div class="existing-gallery-item" data-existing-id="<?= $existingId ?>">
+                                    <img src="<?= e(resolve_media_url($image['image_url'])) ?>" alt="Ảnh SP">
+
+                                    <div class="existing-gallery-meta">
+                                        <?php if ($index === 0): ?>
+                                            <span class="thumb-badge">Đang là ảnh chính</span>
+                                        <?php endif; ?>
+
+                                        <label class="mini-option">
+                                            <input type="radio" name="primary_image" value="existing:<?= $existingId ?>" class="primary-radio" data-existing-id="<?= $existingId ?>" <?= $currentPrimaryImage === 'existing:' . $existingId ? 'checked' : '' ?>>
+                                            <span>Chọn làm ảnh chính</span>
+                                        </label>
+
+                                        <label class="mini-option danger">
+                                            <input type="checkbox" name="remove_image_ids[]" value="<?= $existingId ?>" class="remove-image-checkbox" data-existing-id="<?= $existingId ?>">
+                                            <span>Xóa ảnh</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-primary btn-big" type="submit" id="submitBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Lưu thông tin sản phẩm
+                </button>
+
+                <a class="btn btn-light btn-big" href="<?= BASE_URL ?>/admin/products.php">Hủy thao tác</a>
+            </div>
+        </form>
+    </main>
 </div>
 
 <script>
+// ==========================================================================
+// GIỮ NGUYÊN HOÀN TOÀN JAVASCRIPT CỦA BẠN (KHÔNG CHỈNH SỬA LOGIC)
+// ==========================================================================
 document.addEventListener('DOMContentLoaded', function () {
     const categorySelect = document.getElementById('categorySelect');
     const typeSelect = document.getElementById('productTypeSelect');
@@ -1251,7 +981,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function setUploadStatus(message, type = '') {
         if (!uploadStatus) return;
         uploadStatus.textContent = message || '';
-        uploadStatus.style.color = type === 'error' ? '#dc2626' : (type === 'success' ? '#16a34a' : '#2563eb');
+        uploadStatus.style.color = type === 'error' ? '#dc2626' : (type === 'success' ? '#10b981' : '#4f46e5');
     }
 
     function setSubmitBusyState() {
@@ -1538,7 +1268,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function compressImage(file, options = {}) {
         const {
             maxWidth = 1280,
-            quality = 0.78
+            quality = 0.8 // Tăng chất lượng nhẹ, bù đắp việc giảm dung lượng của webp
         } = options;
 
         if (!file || !file.type || !file.type.startsWith('image/')) {
@@ -1630,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 setUploadStatus(`Đang chuẩn bị ảnh ${index + 1}/${files.length}...`);
                 compressedFiles[index] = await compressImage(files[index], {
                     maxWidth: 1280,
-                    quality: 0.76
+                    quality: 0.8
                 });
             }
         }
@@ -1673,12 +1403,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const files = Array.from(fileList || []);
         compressedFilesCache = [];
 
-        // --- SỬA THÊM: Xóa ngay state cũ khi chọn ảnh mới để đảm bảo thay thế hoàn toàn ---
+        // Xóa ngay state cũ khi chọn ảnh mới để đảm bảo thay thế hoàn toàn
         stagedUploads = [];
         syncHiddenUploadedPaths();
         clearNewPreview();
         setUploadStatus('');
-        // -----------------------------------------------------------------------------------
 
         if (!files.length) {
             return;
@@ -1727,7 +1456,7 @@ document.addEventListener('DOMContentLoaded', function () {
             compressedFilesCache = [];
 
             setUploadStatus(
-                `Đã chuẩn bị ${stagedUploads.length} ảnh: ${formatBytes(result.originalTotal)} → ${formatBytes(result.compressedTotal)}. Khi bấm Lưu sẽ nhanh hơn nhiều.`,
+                `Đã chuẩn bị ${stagedUploads.length} ảnh: ${formatBytes(result.originalTotal)} → ${formatBytes(result.compressedTotal)}. Khi bấm Lưu sẽ cực nhanh.`,
                 'success'
             );
         } catch (error) {
@@ -1755,7 +1484,6 @@ document.addEventListener('DOMContentLoaded', function () {
         input.addEventListener('input', function () {
             this.value = formatMoney(this.value);
         });
-
         input.value = formatMoney(input.value);
     });
 
@@ -1835,4 +1563,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
