@@ -821,6 +821,16 @@ body.popup-open {
                                 <span>Liên hệ mua hàng</span>
                             </div>
                         </a>
+
+                        <a class="social-card zalo-group" href="https://zalo.me/g/bjazlwfwqlsmruqdnxqr" target="_blank" rel="noopener noreferrer">
+                            <div class="social-icon icon-image">
+                                <img src="<?= e($zaloIconUrl) ?>" alt="Zalo Group" width="24" height="24" loading="lazy" decoding="async">
+                            </div>
+                            <div class="social-text">
+                                <strong>Nhóm Zalo</strong>
+                                <span>Tham gia săn sale</span>
+                            </div>
+                        </a>
                     </div>
                 </div>
 

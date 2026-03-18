@@ -337,6 +337,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $productCode = generate_unique_product_code(); // Backup
             }
 
+            // XỬ LÝ TRÙNG MÃ SẢN PHẨM KHI ĐĂNG TỪ NHIỀU TAB CÙNG LÚC
+            $finalProductCode = $productCode;
+            $attempt = 0;
+            while(true) {
+                $stmtCheck = db()->prepare("SELECT id FROM products WHERE product_code = ?");
+                $stmtCheck->execute([$finalProductCode]);
+                if (!$stmtCheck->fetchColumn()) {
+                    break; // Không bị trùng, thoát vòng lặp
+                }
+                
+                // Trùng mã -> tăng số đuôi lên
+                $attempt++;
+                $parts = explode('_', $productCode);
+                $num = (int)end($parts);
+                array_pop($parts);
+                $prefix = implode('_', $parts);
+                
+                if (empty($prefix)) {
+                    $prefix = $productCode;
+                    $num = 0;
+                }
+                
+                $finalProductCode = $prefix . '_' . str_pad($num + $attempt, 3, '0', STR_PAD_LEFT);
+            }
+            $productCode = $finalProductCode;
+
             $galleryImages = $uploadedImages;
             $primaryTarget = null;
 
@@ -359,7 +385,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt->execute([
                 $data['product_name'],
-                $productCode,
+                $productCode, 
                 $data['category_id'],
                 $data['product_type_id'],
                 $data['style_id'],
@@ -424,7 +450,7 @@ if ($currentPrimaryImage === '' && !empty($images)) {
 
 <style>
 /* ==========================================================================
-   MODERN ADMIN DASHBOARD STYLESHEET (Đồng bộ)
+   MODERN ADMIN DASHBOARD STYLESHEET
    ========================================================================== */
 :root {
     --admin-bg: #f3f4f6;
@@ -453,98 +479,23 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ==========================================
-   BỐ CỤC CHÍNH
-   ========================================== */
-.admin-wrapper {
-    display: flex;
-    min-height: 100vh;
-    width: 100%;
-}
-
 /* SIDEBAR */
-.admin-sidebar {
-    width: var(--sidebar-width);
-    background: var(--admin-card);
-    border-right: 1px solid var(--admin-border);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-}
-
-.sidebar-header {
-    padding: 24px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.sidebar-header h2 {
-    font-size: 22px;
-    font-weight: 700;
-    margin: 0;
-    color: var(--admin-primary);
-    letter-spacing: -0.5px;
-}
-
-.sidebar-menu {
-    list-style: none;
-    padding: 0 16px;
-    margin: 0;
-    flex-grow: 1;
-}
-
-.sidebar-menu li {
-    margin-bottom: 4px;
-}
-
-.sidebar-menu a {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    color: var(--admin-text-muted);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.sidebar-menu a:hover {
-    background-color: #f9fafb;
-    color: var(--admin-text-main);
-}
-
-.sidebar-menu a.active {
-    background-color: #eef2ff;
-    color: var(--admin-primary);
-    font-weight: 600;
-}
-
-.sidebar-menu a.text-danger {
-    color: var(--admin-danger);
-    margin-top: auto;
-}
-.sidebar-menu a.text-danger:hover {
-    background-color: var(--admin-danger-bg);
-}
+.admin-wrapper { display: flex; min-height: 100vh; width: 100%; }
+.admin-sidebar { width: var(--sidebar-width); background: var(--admin-card); border-right: 1px solid var(--admin-border); flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.sidebar-header { padding: 24px; display: flex; align-items: center; gap: 12px; }
+.sidebar-header h2 { font-size: 22px; font-weight: 700; margin: 0; color: var(--admin-primary); letter-spacing: -0.5px; }
+.sidebar-menu { list-style: none; padding: 0 16px; margin: 0; flex-grow: 1; }
+.sidebar-menu li { margin-bottom: 4px; }
+.sidebar-menu a { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--admin-text-muted); text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 8px; transition: all 0.2s ease; }
+.sidebar-menu a:hover { background-color: #f9fafb; color: var(--admin-text-main); }
+.sidebar-menu a.active { background-color: #eef2ff; color: var(--admin-primary); font-weight: 600; }
+.sidebar-menu a.text-danger { color: var(--admin-danger); margin-top: auto; }
+.sidebar-menu a.text-danger:hover { background-color: var(--admin-danger-bg); }
 
 /* MAIN CONTENT */
-.admin-main {
-    flex-grow: 1;
-    padding: 32px;
-    max-width: calc(100% - var(--sidebar-width));
-    overflow-x: hidden;
-}
+.admin-main { flex-grow: 1; padding: 32px; max-width: calc(100% - var(--sidebar-width)); overflow-x: hidden; }
 
-/* ==========================================
-   CSS DÀNH CHO FORM SẢN PHẨM
-   ========================================== */
+/* CSS FORM */
 .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--admin-border); gap: 12px; flex-wrap: wrap; }
 .admin-header h1 { font-size: 24px; color: var(--admin-text-main); margin: 0; font-weight: 700; }
 .admin-header .btn-light { background: #fff; border: 1px solid var(--admin-border); padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 8px; color: var(--admin-text-main); text-decoration: none; transition: all 0.2s; }
@@ -566,16 +517,9 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 
 select.form-control {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 16px 16px;
-    padding-right: 40px;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
+    background-repeat: no-repeat; background-position: right 12px center; background-size: 16px 16px; padding-right: 40px; -webkit-appearance: none; -moz-appearance: none; appearance: none;
 }
 
-/* Checkboxes */
 .checkbox-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
 .checkbox-chip { display: inline-flex; align-items: center; gap: 8px; background: #f9fafb; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid var(--admin-border); transition: all 0.2s; color: var(--admin-text-main); }
 .checkbox-chip input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--admin-primary); cursor: pointer; flex-shrink: 0; margin: 0; }
@@ -587,7 +531,6 @@ select.form-control {
 .checkbox-inline input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--admin-primary); flex-shrink: 0; margin: 0; }
 .checkbox-inline:has(input:checked) { background: #eef2ff; border-color: #a5b4fc; }
 
-/* Image Upload Area */
 .upload-container { background: #fff; border: 1px solid var(--admin-border); border-radius: 12px; padding: 24px; box-shadow: var(--admin-shadow-sm); }
 .upload-title { font-size: 16px !important; font-weight: 700 !important; margin-bottom: 16px !important; color: var(--admin-text-main) !important; }
 .upload-dropzone { position: relative; border: 2px dashed #cbd5e1; border-radius: 12px; background: #f9fafb; padding: 40px 20px; text-align: center; transition: all 0.2s ease; cursor: pointer; }
@@ -599,7 +542,6 @@ select.form-control {
 .upload-placeholder .text-sub { font-size: 13px; color: var(--admin-text-muted); }
 .upload-status { margin-top: 12px; font-size: 14px; font-weight: 500; min-height: 20px; }
 
-/* Gallery Items */
 .existing-gallery { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--admin-border); }
 .preview-gallery { margin-top: 0; padding-top: 0; border-top: none; }
 .existing-gallery h3 { font-size: 16px; font-weight: 600; color: var(--admin-text-main); margin-bottom: 16px; }
@@ -615,15 +557,12 @@ select.form-control {
 .mini-option.danger { color: var(--admin-danger); }
 .mini-option.danger input[type="checkbox"] { accent-color: var(--admin-danger); }
 .preview-file-name { font-size: 12px; color: var(--admin-text-muted); line-height: 1.4; word-break: break-word; text-align: left; margin-bottom: 4px; }
-
 .existing-gallery-item.is-removing { opacity: 0.5; border-color: var(--admin-danger-border); background: var(--admin-danger-bg); }
 .existing-gallery-item.is-removing img { filter: grayscale(80%); }
 
-/* Alerts */
 .alert { padding: 16px 20px; border-radius: 10px; margin-bottom: 24px; font-size: 14px; font-weight: 500; line-height: 1.5; display: flex; align-items: center; gap: 10px; }
 .alert.error { background-color: var(--admin-danger-bg); color: #b91c1c; border: 1px solid var(--admin-danger-border); }
 
-/* Buttons */
 .form-actions { display: flex; gap: 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--admin-border); }
 .form-actions .btn-big { padding: 12px 24px; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; }
 .btn-primary { background: var(--admin-primary); color: #fff; }
@@ -863,7 +802,7 @@ select.form-control {
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                             </svg>
                             <span class="text-main">Nhấn để chọn ảnh hoặc kéo thả vào đây</span>
-                            <span class="text-sub">Hệ thống sẽ nén nhẹ và tải nền ngay lập tức. Tối đa 8 ảnh/lần.</span>
+                            <span class="text-sub">Hệ thống sẽ nén nhẹ và tải nền ngay lập tức. Tối đa 50 ảnh/lần.</span>
                         </div>
                     </div>
 
@@ -925,9 +864,6 @@ select.form-control {
 </div>
 
 <script>
-// ==========================================================================
-// GIỮ NGUYÊN HOÀN TOÀN JAVASCRIPT CỦA BẠN (KHÔNG CHỈNH SỬA LOGIC)
-// ==========================================================================
 document.addEventListener('DOMContentLoaded', function () {
     const categorySelect = document.getElementById('categorySelect');
     const typeSelect = document.getElementById('productTypeSelect');
@@ -1268,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function compressImage(file, options = {}) {
         const {
             maxWidth = 1280,
-            quality = 0.8 // Tăng chất lượng nhẹ, bù đắp việc giảm dung lượng của webp
+            quality = 0.8
         } = options;
 
         if (!file || !file.type || !file.type.startsWith('image/')) {
@@ -1403,7 +1339,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const files = Array.from(fileList || []);
         compressedFilesCache = [];
 
-        // Xóa ngay state cũ khi chọn ảnh mới để đảm bảo thay thế hoàn toàn
         stagedUploads = [];
         syncHiddenUploadedPaths();
         clearNewPreview();
@@ -1413,9 +1348,9 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (files.length > 8) {
+        if (files.length > 50) {
             galleryInput.value = '';
-            setUploadStatus('Chỉ nên chọn tối đa 8 ảnh mỗi lần.', 'error');
+            setUploadStatus('Chỉ nên chọn tối đa 50 ảnh mỗi lần.', 'error');
             return;
         }
 
@@ -1479,11 +1414,29 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // ==========================================================================
+    // [CẬP NHẬT] LUÔN LUÔN THÊM 3 SỐ 0 KHI NGƯỜI DÙNG THAY ĐỔI DỮ LIỆU
+    // Dùng sự kiện 'change' để tránh lỗi thêm 3 số 0 liên tục khi click ra/vào
+    // ==========================================================================
     const moneyInputs = document.querySelectorAll('.money-input');
     moneyInputs.forEach((input) => {
+        // Vẫn định dạng dấu chấm như bình thường khi đang gõ
         input.addEventListener('input', function () {
             this.value = formatMoney(this.value);
         });
+        
+        // Khi thay đổi xong (nhấn Tab hoặc click ra ngoài), luôn luôn tự nhân 1000
+        input.addEventListener('change', function () {
+            let rawValue = String(this.value).replace(/\D/g, ''); 
+            if (rawValue !== '') {
+                let num = parseInt(rawValue, 10);
+                if (num > 0) {
+                    num = num * 1000;
+                    this.value = formatMoney(String(num));
+                }
+            }
+        });
+        
         input.value = formatMoney(input.value);
     });
 
@@ -1562,4 +1515,3 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
-
