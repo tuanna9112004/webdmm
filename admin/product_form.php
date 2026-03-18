@@ -299,34 +299,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $thumbnail = $galleryImages[0] ?? null;
 
             $stmt = db()->prepare('
-                UPDATE products
-                SET product_name = ?, category_id = ?, product_type_id = ?, style_id = ?, gender = ?,
-                    original_price = ?, sale_price = ?, purchase_price = ?, note = ?, material = ?, size = ?, information = ?,
-                    short_description = ?, quantity = ?, color = ?, import_link = ?, thumbnail = ?, is_active = ?
-                WHERE id = ?
-            ');
+    INSERT INTO products (
+        product_name, product_code, category_id, product_type_id, style_id, gender,
+        original_price, sale_price, purchase_price, note, material, size, information, short_description,
+        quantity, color, import_link, thumbnail, is_active
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+');
 
-            $stmt->execute([
-                $data['product_name'],
-                $data['category_id'],
-                $data['product_type_id'],
-                $data['style_id'],
-                $data['gender'],
-                $data['original_price'],
-                $data['sale_price'],
-                $data['purchase_price'],
-                $data['note'],
-                $data['material'],
-                $data['size'],
-                $data['information'],
-                $data['short_description'],
-                $data['quantity'],
-                $data['color'],
-                $data['import_link'],
-                $thumbnail,
-                $data['is_active'],
-                $id,
-            ]);
+$stmt->execute([
+    $data['product_name'],
+    $productCode,
+    $data['category_id'],
+    $data['product_type_id'],
+    $data['style_id'],
+    $data['gender'],
+    $data['original_price'],
+    $data['sale_price'],
+    $data['purchase_price'],
+    $data['note'],
+    $data['material'],
+    $data['size'],
+    $data['information'],
+    $data['short_description'],
+    $data['quantity'],
+    $data['color'],
+    $data['import_link'],
+    $thumbnail,
+    $data['is_active'],
+]);
 
             replace_product_gallery($id, $galleryImages);
             sync_product_conditions($id, $selectedConditions);

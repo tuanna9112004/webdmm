@@ -412,7 +412,7 @@ body.popup-open {
    ========================================================= */
 .product-grid-pro {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Desktop: 4 items per row */
+    grid-template-columns: repeat(4, 1fr); /* Desktop: 4 items per row */
     gap: 30px;
     padding: 20px 0;
     transition: opacity 0.3s ease;
@@ -583,7 +583,7 @@ body.popup-open {
 }
 
 /* =========================================================
-   RESPONSIVE: MOBILE LÊN ĐẾN 4 SẢN PHẨM / HÀNG
+   RESPONSIVE: MOBILE TỐI ƯU 2 SẢN PHẨM / HÀNG
    ========================================================= */
 @media screen and (max-width: 768px) {
     /* Popup Mobile */
@@ -690,39 +690,39 @@ body.popup-open {
         border-radius: 10px;
     }
 
-    /* Ép 4 SẢN PHẨM 1 HÀNG TRÊN MOBILE */
+    /* TỐI ƯU 2 SẢN PHẨM 1 HÀNG TRÊN MOBILE */
     .product-grid-pro {
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 6px; /* Khoảng cách siêu nhỏ để vừa 4 sản phẩm */
-        padding: 10px 0;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px;
+        padding: 10px;
     }
 
     .product-card-pro {
-        border-radius: 10px; /* Bo góc nhỏ gọn hơn */
+        border-radius: 12px;
     }
 
     .product-card-pro:hover {
-        transform: translateY(-4px); /* Giảm hiệu ứng bay để tránh lẹm màn hình */
+        transform: translateY(-4px); 
     }
 
     .product-card-content {
-        padding: 8px; /* Giảm padding thẻ tối đa */
+        padding: 12px; 
     }
 
     .product-badge {
-        font-size: 8px; /* Thu nhỏ chữ badge */
-        padding: 3px 6px;
-        top: 6px;
-        left: 6px;
+        font-size: 10px; 
+        padding: 4px 8px;
+        top: 8px;
+        left: 8px;
         border-radius: 12px;
     }
 
     .product-top {
-        margin-bottom: 6px;
+        margin-bottom: 8px;
     }
 
     .product-category {
-        font-size: 8px;
+        font-size: 11px;
         margin-bottom: 4px;
         white-space: nowrap;
         overflow: hidden;
@@ -730,43 +730,45 @@ body.popup-open {
     }
 
     .product-title {
-        font-size: 11px; /* Font size siêu nhỏ gọn */
-        line-height: 1.3;
-        margin-bottom: 4px;
+        font-size: 14px; 
+        line-height: 1.4;
+        margin-bottom: 6px;
     }
 
     .product-code {
-        font-size: 8px;
-        padding: 2px 4px;
+        font-size: 10px;
+        padding: 3px 6px;
         border-radius: 4px;
     }
 
     .price-stack {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 2px;
-        margin-bottom: 8px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px;
+        margin-bottom: 12px;
     }
 
     .price {
-        font-size: 12px;
+        font-size: 15px;
     }
 
     .price-old {
-        font-size: 9px;
+        font-size: 12px;
     }
 
     .card-actions {
         display: flex;
-        flex-direction: column; /* Xếp dọc 2 nút bấm */
-        gap: 4px;
+        flex-direction: column; 
+        gap: 8px;
     }
 
     .card-actions .btn {
-        font-size: 9px;
-        padding: 6px 2px;
-        border-radius: 6px;
+        font-size: 12px;
+        padding: 8px 4px;
+        border-radius: 8px;
         white-space: nowrap;
+        width: 100%;
     }
 }
 </style>
